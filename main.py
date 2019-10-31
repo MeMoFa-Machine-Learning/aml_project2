@@ -7,6 +7,7 @@ from sklearn.ensemble import IsolationForest
 from sklearn.decomposition import PCA, KernelPCA
 from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import RandomOverSampler
 
 
 def perform_data_scaling(x_train, x_test):
@@ -25,6 +26,15 @@ def find_outliers(x):
     return outlier_indices
 
 
+def oversampling(X, y):
+    ros = RandomOverSampler(sampling_strategy='not majority', random_state=42)
+    X_res, y_res = ros.fit_sample(X, y)
+    noise = np.random.normal(0, 1, X_res.shape)
+    X_res = np.concatenate(X, X_res+noise)
+    y_res = np.concatenate(y, y_res)
+    return X_res, y_res
+
+
 def main():
     output_pathname = "output"
     output_filepath = ospath.join(output_pathname, "out.csv")
@@ -39,7 +49,7 @@ def main():
     test_data_ids = test_data_x["id"]  # Get the ids for processing later on
     test_data_x = test_data_x.drop(["id"], axis=1)
 
-    # separate the data between age and features and convert them into values (required after using pandas)
+    # separate the data between label and features and convert them into values (required after using pandas)
     x_train_orig = train_data_x.values
     y_train_orig = train_data_y.values
     x_test_orig = test_data_x.values
