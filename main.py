@@ -4,8 +4,8 @@ import numpy as np
 from os import makedirs
 from sklearn.preprocessing import RobustScaler
 from sklearn.ensemble import IsolationForest
-from sklearn.decomposition import PCA
-import xgboost as xgb
+from sklearn.decomposition import PCA, KernelPCA
+from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 
 
@@ -40,60 +40,38 @@ def main():
     test_data_x = test_data_x.drop(["id"], axis=1)
 
     # separate the data between age and features and convert them into values (required after using pandas)
-    x_train_orig = train_data_x.fillna(train_data_x.median()).values
+    x_train_orig = train_data_x.values
     y_train_orig = train_data_y.values
-    x_test_orig = test_data_x.fillna(test_data_x.median()).values
-
-    # Preprocessing step #1: Whitening of data
-    x_train_whitened, x_test_whitened = perform_data_scaling(x_train_orig, x_test_orig)
+    x_test_orig = test_data_x.values
 
     # PCA step #1
-    pca = PCA(n_components=2)
-    x_pca = pca.fit_transform(x_train_whitened)
-    print(pca.explained_variance_ratio_)
-    print("\n")
+    pca = KernelPCA(kernel="rbf", n_components=2)
+    x_pca = pca.fit_transform(x_train_orig)
 
     # Preprocessing step #2: Outlier detection and removal
 
     outlier_indices = find_outliers(x_pca)
-    x_train_whitened = x_train_whitened[outlier_indices]
+    x_train_whitened = x_train_orig[outlier_indices]
     y_train_orig = y_train_orig[outlier_indices]
-
-    # # PCA step #2
-    # pca = PCA()
-    # pca.fit(x_train_whitened)
-    # print(pca.explained_variance_ratio_)
-    # print("\n")
 
     # Preprocessing step #3/training: XGBoost
     np.random.seed(1)
 
-    X_train, X_eval, y_train, y_eval = train_test_split(x_train_whitened, y_train_orig, test_size=0.2, random_state=100)
-    dtrain = xgb.DMatrix(data=X_train, label=y_train)
-    deval = xgb.DMatrix(data=X_eval, label=y_eval)
-    dtest = xgb.DMatrix(x_test_whitened)
-    param = dict({'max_depth': 5,
-                  'eta': 0.02,
-                  'objective': 'reg:squarederror',
-                  'reg_alpha': 2, 'reg_lambda': 0.5,
-                  'colsample_bytree': 0.3})
-    param['eval_metric'] = 'rmse'
-    evallist = [(deval, 'eval'), (dtrain, 'train')]
-    bst = xgb.train(dtrain=dtrain, params=param, evals=evallist, num_boost_round=500)
+    model = XGBClassifier(learning_rate=0.05, n_estimators=2, max_depth=5)
+    model.fit(x_train_whitened, y_train_orig)
 
     # Do the prediction
-    # y_predict = lasso_optimal.predict(x_test_whitened)
-    y_predict = bst.predict(dtest)
+    y_predict = model.predict(x_test_orig)
 
     # Prepare results dataframe
-    results = np.zeros((x_test_whitened.shape[0], 2))
+    results = np.zeros((x_test_orig.shape[0], 2))
     results[:, 0] = test_data_ids
     results[:, 1] = y_predict
 
     # save the output weights
     if not ospath.exists(output_pathname):
         makedirs(output_pathname)
-    np.savetxt(output_filepath, results, fmt=["%1.1f", "%1.14f"], newline="\n", delimiter=",", header="id,y",
+    np.savetxt(output_filepath, results, fmt=["%1.1f", "%1.1f"], newline="\n", delimiter=",", header="id,y",
                comments="")
 
 
