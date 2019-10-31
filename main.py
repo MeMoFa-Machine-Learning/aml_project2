@@ -2,36 +2,24 @@ import pandas as pd
 import os.path as ospath
 import numpy as np
 from os import makedirs
-from sklearn.preprocessing import RobustScaler
-from sklearn.ensemble import IsolationForest
-from sklearn.decomposition import PCA, KernelPCA
+from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
-from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 
 
 def perform_data_scaling(x_train, x_test):
-    scaler = RobustScaler(quantile_range=(20.0, 80.0))
+    scaler = StandardScaler()
     x_train_whitened = scaler.fit_transform(x_train)
     x_test_whitened = scaler.transform(x_test)
     return x_train_whitened, x_test_whitened
 
 
-def find_outliers(x):
-    outlier_indices = np.zeros(x.shape[0], dtype=np.bool)
-    isolation_forest = IsolationForest(contamination="auto", behaviour="new")
-    isolation_forest.fit(x)
-    predictions = isolation_forest.predict(x)
-    outlier_indices[predictions == 1] = 1
-    return outlier_indices
-
-
 def oversampling(X, y):
     ros = RandomOverSampler(sampling_strategy='not majority', random_state=42)
     X_res, y_res = ros.fit_sample(X, y)
-    noise = np.random.normal(0, 1, X_res.shape)
-    X_res = np.concatenate(X, X_res+noise)
-    y_res = np.concatenate(y, y_res)
+    idx = ros.sample_indices_
+    noise = np.random.normal(0, 1, (X_res.shape[0] - X.shape[0], X.shape[1]))
+    X_res[X.shape[0]:X_res.shape[0]] += noise
     return X_res, y_res
 
 
@@ -54,24 +42,20 @@ def main():
     y_train_orig = train_data_y.values
     x_test_orig = test_data_x.values
 
-    # PCA step #1
-    pca = KernelPCA(kernel="rbf", n_components=2)
-    x_pca = pca.fit_transform(x_train_orig)
+    # Preprocessing step #1: Perform data scaling
+    x_train_whitened, x_test_whitened = perform_data_scaling(x_train_orig, x_test_orig)
 
-    # Preprocessing step #2: Outlier detection and removal
-
-    outlier_indices = find_outliers(x_pca)
-    x_train_whitened = x_train_orig[outlier_indices]
-    y_train_orig = y_train_orig[outlier_indices]
+    # Preprocessing step #2: Oversampling
+    x_res, y_res = oversampling(x_train_whitened, y_train_orig)
 
     # Preprocessing step #3/training: XGBoost
     np.random.seed(1)
 
     model = XGBClassifier(learning_rate=0.05, n_estimators=2, max_depth=5)
-    model.fit(x_train_whitened, y_train_orig)
+    model.fit(x_res, y_res)
 
     # Do the prediction
-    y_predict = model.predict(x_test_orig)
+    y_predict = model.predict(x_test_whitened)
 
     # Prepare results dataframe
     results = np.zeros((x_test_orig.shape[0], 2))
