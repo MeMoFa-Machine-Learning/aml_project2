@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 # scikit-learn helpers
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RepeatedKFold
 from sklearn.decomposition import KernelPCA
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import matplotlib.pyplot as plt
@@ -95,11 +95,7 @@ def perform_data_scaling(x_train, x_test):
 def main():
     # set critical parameters
     seed = 1
-    folds = 10  # used in grid search
-    # the following model parameters will be fixed for now
-    epochs = 50
-    learning_rate = 1e-3
-    batch_size = 100
+    folds = RepeatedKFold(n_splits=10, n_repeats=3, random_state=np.random.seed(1))  # used in grid search
     # setting miscellaneous parameters including those for I/O
     kernel_type = "rbf"
     output_pathname = "output"
@@ -134,16 +130,25 @@ def main():
     ######################################
     # grid search for optimal parameters #
     ######################################
-    model = KerasClassifier(build_fn=create_model, epochs=epochs, learning_rate=learning_rate, batch_size=batch_size, verbose=False)
-    # neurons = [1000, 2500, 5000]
-    # layers = [2, 5, 8, 11]
-    # dropout = [0.3, 0.5, 0.7]
-    neurons = [10, 20]
-    layers = [1, 2]
-    dropout = [0.7, ]
-    param_grid = dict(npl=neurons, lrs=layers, dropout=dropout)
+    model = KerasClassifier(build_fn=create_model, verbose=False)
+    neurons = [1000, 2500, 5000]
+    layers = [2, 5, 8, 11]
+    dropout = [0.3, 0.5, 0.7]
+    epochs = [50, ]
+    learning_rate = [1e-3, ]
+    batch_size = [100, ]
+
+    param_grid = dict(
+        npl=neurons,
+        lrs=layers,
+        dropout=dropout,
+        epochs=epochs,
+        learning_rate=learning_rate,
+        batch_size=batch_size
+    )
     grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=folds)
     grid_result = grid.fit(x_train_whitened, y_train_encoded)
+    
     # log the results
     means = grid_result.cv_results_['mean_test_score']
     stds = grid_result.cv_results_['std_test_score']
@@ -152,18 +157,27 @@ def main():
     print('mean (stdev) \t parameters')
     for mean, stdev, param in zip(means, stds, params):
         print("%f (%f) with: %r" % (mean, stdev, param))
-    opt_npl, opt_lrs, opt_dropout = grid_result.best_params_['npl'], grid_result.best_params_['lrs'], grid_result.best_params_['dropout']
+    opt_npl, opt_lrs, opt_dropout, opt_epochs, opt_learning_rate, opt_batch_size = grid_result.best_params_['npl'], \
+        grid_result.best_params_['lrs'],\
+        grid_result.best_params_['dropout'], \
+        grid_result.best_params_['epochs'], \
+        grid_result.best_params_['learning_rate'], \
+        grid_result.best_params_['batch_size']
 
     # Do the prediction
-    model = create_model(npl=opt_npl, lrs=opt_lrs, activation_fct='relu', dropout=opt_dropout)
-    model.fit(x_train_whitened, y_train_encoded, epochs=epochs, learning_rate=learning_rate, batch_size=batch_size, verbose=False)
+    model = create_model(npl=opt_npl,
+                         lrs=opt_lrs,
+                         activation_fct='relu',
+                         dropout=opt_dropout,
+                         learning_rate=opt_learning_rate)
+    model.fit(x_train_whitened, y_train_encoded, epochs=opt_epochs, batch_size=opt_batch_size, verbose=False)
     model.summary()
     y_test_predict = model.predict(x_test_whitened)
 
     # Prepare results dataframe
     results = np.zeros((x_test_orig.shape[0], 2))
     results[:, 0] = test_data_ids
-    results[:, 1] = y_test_predict
+    results[:, 1] = np.argmax(y_test_predict, axis=1)
 
     # save the output weights
     if not ospath.exists(output_pathname):
