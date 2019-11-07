@@ -13,14 +13,15 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import matplotlib.pyplot as plt
 
 # keras machinery
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
-from keras.constraints import max_norm
-from keras.optimizers import Adam
-from keras.utils import np_utils
-from keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.constraints import max_norm
+from tensorflow.keras.optimizers import Adam
+import tensorflow.keras.utils as np_utils
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.utils import class_weight
-from tensorflow import set_random_seed
+from imblearn.over_sampling import SMOTE
 
 
 ########################################################
@@ -95,7 +96,7 @@ def perform_data_scaling(x_train, x_test):
 def main():
     # set critical parameters
     seed = 1
-    folds = RepeatedKFold(n_splits=10, n_repeats=3, random_state=np.random.seed(1))  # used in grid search
+    folds = RepeatedKFold(n_splits=10, n_repeats=1, random_state=np.random.seed(1))  # used in grid search
     # setting miscellaneous parameters including those for I/O
     kernel_type = "rbf"
     output_pathname = "output"
@@ -119,24 +120,28 @@ def main():
     # Preprocessing step #1: Perform data scaling
     x_train_whitened, x_test_whitened = perform_data_scaling(x_train_orig, x_test_orig)
 
-    # Encode data and labels
-    y_train_encoded = encode_labels(y_train_orig)
-
     # PCA step #1
     pca = KernelPCA(kernel=kernel_type, n_components=2)
     x_pca = pca.fit_transform(x_train_whitened)
     plot3clusters(x_pca, y_train_orig, 'PCA', 'PC', "training_samples_{}.png".format(kernel_type))
 
+    # SMOTE Sampling
+    sm = SMOTE(random_state=42)
+    x_train_res, y_train_res = sm.fit_sample(x_train_whitened, y_train_orig)
+    # Encode data and labels
+    y_train_encoded = encode_labels(y_train_res)
+
     ######################################
     # grid search for optimal parameters #
     ######################################
     model = KerasClassifier(build_fn=create_model, verbose=False)
-    neurons = [1000, 2500, 5000]
-    layers = [2, 5, 8, 11]
-    dropout = [0.3, 0.5, 0.7]
-    epochs = [50, ]
+    neurons = [1000, 2000]
+    layers = [2, 3, 4]
+    dropout = [0.3, 0.5, 0.6]
+    epochs = [50, 100, 200]
     learning_rate = [1e-3, ]
-    batch_size = [100, ]
+    batch_size = [800, ]
+    early_stopping = EarlyStopping(monitor='loss', mode='min', patience=100, restore_best_weights=True, verbose=1)
 
     param_grid = dict(
         npl=neurons,
@@ -144,11 +149,11 @@ def main():
         dropout=dropout,
         epochs=epochs,
         learning_rate=learning_rate,
-        batch_size=batch_size
+        batch_size=batch_size,
     )
     grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=folds)
-    grid_result = grid.fit(x_train_whitened, y_train_encoded)
-    
+    grid_result = grid.fit(x_train_whitened, y_train_encoded, callbacks=[early_stopping])
+
     # log the results
     means = grid_result.cv_results_['mean_test_score']
     stds = grid_result.cv_results_['std_test_score']
@@ -164,13 +169,15 @@ def main():
         grid_result.best_params_['learning_rate'], \
         grid_result.best_params_['batch_size']
 
+    # opt_npl, opt_lrs, opt_dropout, opt_epochs, opt_learning_rate, opt_batch_size = 2000, 10, 0.5, 800, 1e-3, 50
+
     # Do the prediction
     model = create_model(npl=opt_npl,
                          lrs=opt_lrs,
                          activation_fct='relu',
                          dropout=opt_dropout,
                          learning_rate=opt_learning_rate)
-    model.fit(x_train_whitened, y_train_encoded, epochs=opt_epochs, batch_size=opt_batch_size, verbose=False)
+    model.fit(x_train_res, y_train_encoded, epochs=opt_epochs, batch_size=opt_batch_size, verbose=False, callbacks=[early_stopping])
     model.summary()
     y_test_predict = model.predict(x_test_whitened)
 
