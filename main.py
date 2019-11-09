@@ -69,7 +69,7 @@ def main():
 
     # PCA step #1
     kernel_type = 'rbf'
-    pca = KernelPCA(kernel=kernel_type, n_components=2)
+    pca = KernelPCA(kernel=kernel_type, n_components=7)
     x_pca = pca.fit_transform(x_res)
     plot3clusters(x_pca, y_res, 'PCA', 'PC', "training_samples_{}.png".format(kernel_type))
 
@@ -79,12 +79,12 @@ def main():
     # model = XGBClassifier(learning_rate=0.05, n_estimators=2, max_depth=5)
     # model.fit(x_res, y_res)
 
-    X_train, X_eval, y_train, y_eval = train_test_split(x_res, y_res, test_size=0.1, random_state=100)
+    X_train, X_eval, y_train, y_eval = train_test_split(x_pca, y_res, test_size=0.1, random_state=100)
     dtrain = xgb.DMatrix(data=X_train, label=y_train)
     deval = xgb.DMatrix(data=X_eval, label=y_eval)
-    dtest = xgb.DMatrix(x_test_whitened)
+    dtest = xgb.DMatrix(pca.fit_transform(x_test_whitened))
 
-    param = {'max_depth': 3, 'eta': 0.1, 'objective': 'multi:softmax', 'num_class': 3, 'reg_alpha': 10, 'reg_lambda': 1,
+    param = {'max_depth': 3, 'eta': 1, 'objective': 'multi:softmax', 'num_class': 3, 'reg_alpha': 1, 'reg_lambda': 1,
              'colsample_bytree': 0.3}
     param['eval_metric'] = 'mlogloss'
     evallist = [(deval, 'eval'), (dtrain, 'train')]
@@ -99,7 +99,7 @@ def main():
     # Confusion matrix
     # By definition a confusion matrix C is such that C_{i,j} is equal to the number of observations known to be in
     # group i but predicted to be in group j.
-    y_pred = bst.predict(xgb.DMatrix(x_train_whitened))
+    y_pred = bst.predict(xgb.DMatrix(pca.fit_transform(x_train_whitened)))
     y_true = y_train_orig
     print("training set confusion matrix")
     print(confusion_matrix(y_true, y_pred))
