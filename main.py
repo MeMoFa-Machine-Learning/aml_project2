@@ -135,21 +135,15 @@ def main():
     # grid search for optimal parameters #
     ######################################
     model = KerasClassifier(build_fn=create_model, verbose=False)
-    neurons = [1000, 2000]
-    layers = [2, 3, 4]
-    dropout = [0.3, 0.5, 0.6]
-    epochs = [50, 100, 200]
-    learning_rate = [1e-3, ]
-    batch_size = [800, ]
     early_stopping = EarlyStopping(monitor='loss', mode='min', patience=100, restore_best_weights=True, verbose=1)
 
     param_grid = dict(
-        npl=neurons,
-        lrs=layers,
-        dropout=dropout,
-        epochs=epochs,
-        learning_rate=learning_rate,
-        batch_size=batch_size,
+        npl=[1000, 2000],
+        lrs=[2, 3, 4],
+        dropout=[0.3, 0.5, 0.6],
+        epochs=[50, 100, 200],
+        learning_rate=[1e-3, ],
+        batch_size=[800, ],
     )
     grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=folds)
     grid_result = grid.fit(x_train_whitened, y_train_encoded, callbacks=[early_stopping])
