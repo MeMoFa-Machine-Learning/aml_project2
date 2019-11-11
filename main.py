@@ -60,7 +60,7 @@ def main():
 
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=1, num=5, endpoint=True, base=10)) + ['scale']
-    degree_param = list(np.linspace(start=2, stop=22, num=5))
+    degree_param = list(np.linspace(start=1, stop=21, num=5))
     max_iters = 2500
     # reg_param = [1]
     # gamma_param = ['scale']
@@ -71,11 +71,6 @@ def main():
             'kernel': ['rbf'],
             'C': reg_param,
             'gamma': gamma_param,
-            'max_iter': [max_iters]
-        },
-        {
-            'kernel': ['linear'],
-            'C': reg_param,
             'max_iter': [max_iters]
         },
         {
