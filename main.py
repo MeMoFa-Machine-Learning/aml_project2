@@ -10,7 +10,7 @@ from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 
 
 def perform_data_scaling(x_train, x_test):
@@ -53,46 +53,58 @@ def main():
     # Preprocessing step #2: Oversampling
     x_res, y_res = oversampling(x_train_whitened, y_train_orig)
 
-    # Preprocessing step #3: Feature selection
-    n_components = [10, 100, 1000, ]
-    class_weight = [{0: 10, 1: 80, 2: 10}, {0: 12.5, 1: 75, 2: 12.5}]
-    kernels = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed']
+    # Training Step #1: Grid Search
+    x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
+
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
+    gamma_param = list(np.logspace(start=-3, stop=1, num=5, endpoint=True, base=10)) + ['scale']
+    degree_param = list(np.linspace(start=2, stop=22, num=5))
 
-    # n_components = [1000, ]
-    # class_weight = [{0: 25, 1: 75, 2: 25}, ]
-    # kernels = ['linear', ]
-    # reg_param = list(np.logspace(start=-2, stop=2, num=1, endpoint=True, base=10))
+    parameters = [
+        {
+            'kernel': ['rbf'],
+            'C': reg_param,
+            'gamma': gamma_param,
+        },
+        {
+            'kernel': ['linear'],
+            'C': reg_param
+        },
+        {
+            'kernel': ['poly'],
+            'C': reg_param,
+            'gamma': gamma_param,
+            'degree': degree_param
+        },
+        {
+            'kernel': ['sigmoid'],
+            'C': reg_param,
+            'gamma': gamma_param
+        }
+    ]
 
-    wclf = SVC(kernel='rbf', probability=True)
-    pca = PCA()
-    pipe = Pipeline(steps=[('pca', pca), ('wclf', wclf)])
-    param_grid = dict(
-        pca__n_components=n_components,
-        wclf__C=reg_param,
-        wclf__class_weight=class_weight,
-        wclf__kernel=kernels
-    )
-    kfold = StratifiedKFold(n_splits=3, shuffle=True, random_state=7)
+    best_model_scores = []
+    for kernel_params in parameters:
+        wclf = SVC()
+        kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
 
-    # C-support vector classification according to a one-vs-one scheme
-    grid_search = GridSearchCV(pipe, param_grid, scoring="neg_log_loss", n_jobs=-1, cv=kfold, verbose=0)
-    grid_result = grid_search.fit(x_res, y_res)
-    print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+        # C-support vector classification according to a one-vs-one scheme
+        grid_search = GridSearchCV(wclf, kernel_params, scoring="balanced_accuracy", n_jobs=-1, cv=kfold, verbose=1)
+        grid_result = grid_search.fit(x_train_gs, y_train_gs)
+        print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+        y_ho_pred = grid_search.predict(x_ho)
+        best_model_scores.append(balanced_accuracy_score(y_ho_pred, y_ho))
+
+    # Pick best params and fit model
+    final_model_params = parameters[int(np.argmax(best_model_scores))]
+    final_model = SVC(final_model_params)
+    final_model.fit(x_res, y_res)
 
     # Do the prediction
-    y_predict = grid_search.predict(x_test_whitened)
+    y_predict = final_model.predict(x_test_whitened)
     unique_elements, counts_elements = np.unique(y_predict, return_counts=True)
     print("test set labels and their corresponding counts")
     print(np.asarray((unique_elements, counts_elements)))
-
-    # Confusion matrix
-    # By definition a confusion matrix C is such that C_{i,j} is equal to the number of observations known to be in
-    # group i but predicted to be in group j.
-    y_pred = grid_search.predict(x_train_whitened)
-    y_true = y_train_orig
-    print("training set confusion matrix")
-    print(confusion_matrix(y_true, y_pred))
 
     # Prepare results dataframe
     results = np.zeros((x_test_orig.shape[0], 2))
