@@ -5,12 +5,14 @@ from os import makedirs
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.model_selection import train_test_split
-from sklearn.decomposition import PCA
 from sklearn.svm import SVC
-from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
+
+import logging
+logging.getLogger().setLevel(logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(message)s')
 
 
 def perform_data_scaling(x_train, x_test):
@@ -59,31 +61,40 @@ def main():
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=1, num=5, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.linspace(start=2, stop=22, num=5))
+    max_iters = 2500
+    # reg_param = [1]
+    # gamma_param = ['scale']
+    # degree_param = [2]
 
     parameters = [
         {
             'kernel': ['rbf'],
             'C': reg_param,
             'gamma': gamma_param,
+            'max_iter': [max_iters]
         },
         {
             'kernel': ['linear'],
-            'C': reg_param
+            'C': reg_param,
+            'max_iter': [max_iters]
         },
         {
             'kernel': ['poly'],
             'C': reg_param,
             'gamma': gamma_param,
-            'degree': degree_param
+            'degree': degree_param,
+            'max_iter': [max_iters]
         },
         {
             'kernel': ['sigmoid'],
             'C': reg_param,
-            'gamma': gamma_param
+            'gamma': gamma_param,
+            'max_iter': [max_iters]
         }
     ]
 
-    best_model_scores = []
+    # Perform the cross-validation
+    best_models = []
     for kernel_params in parameters:
         wclf = SVC()
         kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
@@ -91,13 +102,21 @@ def main():
         # C-support vector classification according to a one-vs-one scheme
         grid_search = GridSearchCV(wclf, kernel_params, scoring="balanced_accuracy", n_jobs=-1, cv=kfold, verbose=1)
         grid_result = grid_search.fit(x_train_gs, y_train_gs)
-        print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+
+        # Calculate statistics and calculate on hold-out
+        logging.info("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
         y_ho_pred = grid_search.predict(x_ho)
-        best_model_scores.append(balanced_accuracy_score(y_ho_pred, y_ho))
+        hold_out_score = balanced_accuracy_score(y_ho_pred, y_ho)
+        best_models.append((hold_out_score, grid_result.best_params_))
+        logging.info("Best score on hold-out: {}".format(hold_out_score))
 
     # Pick best params and fit model
-    final_model_params = parameters[int(np.argmax(best_model_scores))]
-    final_model = SVC(final_model_params)
+    final_model_params_i = int(np.argmax(np.array(best_models)[:, 0]))
+    final_model_params = best_models[final_model_params_i][1]
+    logging.info("Picked the following model: {}".format(final_model_params))
+
+    logging.info("Fitting the final model...")
+    final_model = SVC(**final_model_params)
     final_model.fit(x_res, y_res)
 
     # Do the prediction
