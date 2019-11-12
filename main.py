@@ -72,7 +72,7 @@ def main():
             'C': reg_param,
             'gamma': gamma_param,
             'max_iter': [max_iters],
-            'class_weight': 'balanced'
+            'class_weight': ['balanced']
         },
         {
             'kernel': ['poly'],
@@ -80,14 +80,14 @@ def main():
             'gamma': gamma_param,
             'degree': degree_param,
             'max_iter': [max_iters],
-            'class_weight': 'balanced'
+            'class_weight': ['balanced']
         },
         {
             'kernel': ['sigmoid'],
             'C': reg_param,
             'gamma': gamma_param,
             'max_iter': [max_iters],
-            'class_weight': 'balanced'
+            'class_weight': ['balanced']
         }
     ]
 
