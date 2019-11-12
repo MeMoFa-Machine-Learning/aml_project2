@@ -60,8 +60,8 @@ def main():
 
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=1, num=5, endpoint=True, base=10)) + ['scale']
-    degree_param = list(np.linspace(start=1, stop=21, num=5))
-    max_iters = 2500
+    degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
+    max_iters = 3500
     # reg_param = [1]
     # gamma_param = ['scale']
     # degree_param = [2]
