@@ -61,11 +61,12 @@ def main():
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
 
-    pca_components = [50, 200, 400]
+    pca_components = [50, 100, 200, 400]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=1, num=5, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
     max_iters = 2500
+    # pca_components = [50]
     # reg_param = [1]
     # gamma_param = ['scale']
     # degree_param = [2]
@@ -101,10 +102,8 @@ def main():
     # Perform the cross-validation
     best_models = []
     for kernel_params in parameters:
-        pca = PCA()
-        wclf = SVC()
 
-        pl = Pipeline([('pca', pca), ('svc', wclf)])
+        pl = Pipeline([('pca', PCA()), ('svc', SVC())])
         kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
 
         # C-support vector classification according to a one-vs-one scheme
@@ -124,7 +123,8 @@ def main():
     logging.info("Picked the following model: {}".format(final_model_params))
 
     logging.info("Fitting the final model...")
-    final_model = SVC(**final_model_params)
+    final_model = Pipeline([('pca', PCA()), ('svc', SVC())])
+    final_model.set_params(**final_model_params)
     final_model.fit(x_res, y_res)
 
     # Do the prediction
