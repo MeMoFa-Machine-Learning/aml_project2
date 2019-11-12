@@ -52,8 +52,8 @@ def main():
     # Preprocessing step #1: Perform data scaling
     x_train_whitened, x_test_whitened = perform_data_scaling(x_train_orig, x_test_orig)
 
-    # Preprocessing step #2: Oversampling
-    x_res, y_res = oversampling(x_train_whitened, y_train_orig)
+    # Preprocessing step #2: Oversampling (Skipping for now)
+    x_res, y_res = x_train_whitened, y_train_orig
 
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
@@ -71,20 +71,23 @@ def main():
             'kernel': ['rbf'],
             'C': reg_param,
             'gamma': gamma_param,
-            'max_iter': [max_iters]
+            'max_iter': [max_iters],
+            'class_weight': 'balanced'
         },
         {
             'kernel': ['poly'],
             'C': reg_param,
             'gamma': gamma_param,
             'degree': degree_param,
-            'max_iter': [max_iters]
+            'max_iter': [max_iters],
+            'class_weight': 'balanced'
         },
         {
             'kernel': ['sigmoid'],
             'C': reg_param,
             'gamma': gamma_param,
-            'max_iter': [max_iters]
+            'max_iter': [max_iters],
+            'class_weight': 'balanced'
         }
     ]
 
