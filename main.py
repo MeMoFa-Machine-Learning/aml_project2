@@ -10,7 +10,6 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
-from sklearn.metrics.pairwise import pairwise_kernels
 from sklearn.pipeline import Pipeline
 
 import logging
@@ -60,13 +59,14 @@ def main():
 
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
-
-    pca_components = [50, 100, 200, 400, x_train_orig.shape[1]]
+    pca_components = [50, 100, 200, 400, 600]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
-    gamma_param = list(np.logspace(start=-3, stop=1, num=5, endpoint=True, base=10)) + ['scale']
+    coef0_param = [0] + list(np.logspace(start=-3, stop=2, num=4, endpoint=True, base=10))
+    gamma_param = list(np.logspace(start=-3, stop=2, num=6, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
     max_iters = 2500
     # pca_components = [50]
+    # coef0_param = [0.001]
     # reg_param = [1]
     # gamma_param = ['scale']
     # degree_param = [2]
@@ -83,6 +83,7 @@ def main():
         {
             'pca__n_components': pca_components,
             'svc__kernel': ['poly'],
+            'svc__coef0': coef0_param,
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
             'svc__degree': degree_param,
@@ -92,6 +93,7 @@ def main():
         {
             'pca__n_components': pca_components,
             'svc__kernel': ['sigmoid'],
+            'svc__coef0': coef0_param,
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
             'svc__max_iter': [max_iters],
