@@ -93,7 +93,6 @@ def main():
         {
             'pca__n_components': pca_components,
             'svc__kernel': ['sigmoid'],
-            'svc__coef0': coef0_param,
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
             'svc__max_iter': [max_iters],
