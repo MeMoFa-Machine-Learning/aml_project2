@@ -5,7 +5,7 @@ from os import makedirs
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.model_selection import train_test_split
-from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import StratifiedKFold
@@ -59,13 +59,13 @@ def main():
 
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
-    pca_components = [50, 100, 200, 400, 600]
+    k_best = [10, 50, 100, 200, 400]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     coef0_param = [0] + list(np.logspace(start=-3, stop=2, num=4, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=2, num=6, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
     max_iters = 2500
-    # pca_components = [50]
+    # k_best = [200]
     # coef0_param = [0.001]
     # reg_param = [1]
     # gamma_param = ['scale']
@@ -73,7 +73,7 @@ def main():
 
     parameters = [
         {
-            'pca__n_components': pca_components,
+            'skb__k': k_best,
             'svc__kernel': ['rbf'],
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
@@ -81,30 +81,29 @@ def main():
             'svc__class_weight': ['balanced']
         },
         {
-            'pca__n_components': pca_components,
+            'skb__k': k_best,
             'svc__kernel': ['poly'],
-            'svc__coef0': coef0_param,
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
             'svc__degree': degree_param,
             'svc__max_iter': [max_iters],
             'svc__class_weight': ['balanced']
         },
-        {
-            'pca__n_components': pca_components,
-            'svc__kernel': ['sigmoid'],
-            'svc__C': reg_param,
-            'svc__gamma': gamma_param,
-            'svc__max_iter': [max_iters],
-            'svc__class_weight': ['balanced']
-        }
+        # {
+        #     'skb__k': k_best,
+        #     'svc__kernel': ['sigmoid'],
+        #     'svc__C': reg_param,
+        #     'svc__gamma': gamma_param,
+        #     'svc__max_iter': [max_iters],
+        #     'svc__class_weight': ['balanced']
+        # }
     ]
 
     # Perform the cross-validation
     best_models = []
     for kernel_params in parameters:
 
-        pl = Pipeline([('pca', PCA()), ('svc', SVC())])
+        pl = Pipeline([('skb', SelectKBest()), ('svc', SVC())])
         kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
 
         # C-support vector classification according to a one-vs-one scheme
@@ -124,7 +123,7 @@ def main():
     logging.info("Picked the following model: {}".format(final_model_params))
 
     logging.info("Fitting the final model...")
-    final_model = Pipeline([('pca', PCA()), ('svc', SVC())])
+    final_model = Pipeline([('skb', SelectKBest()), ('svc', SVC())])
     final_model.set_params(**final_model_params)
     final_model.fit(x_res, y_res)
 
