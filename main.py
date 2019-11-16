@@ -59,7 +59,7 @@ def main():
 
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
-    k_best = [10, 50, 100, 200, 400]
+    k_best = [10, 50, 100, 200, 400, 600, ]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     coef0_param = [0] + list(np.logspace(start=-3, stop=2, num=4, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=2, num=6, endpoint=True, base=10)) + ['scale']
@@ -104,7 +104,7 @@ def main():
     for kernel_params in parameters:
 
         pl = Pipeline([('skb', SelectKBest()), ('svc', SVC())])
-        kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=7)
+        kfold = StratifiedKFold(n_splits=14, shuffle=True, random_state=6)
 
         # C-support vector classification according to a one-vs-one scheme
         grid_search = GridSearchCV(pl, kernel_params, scoring="balanced_accuracy", n_jobs=-1, cv=kfold, verbose=1)
