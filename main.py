@@ -61,12 +61,10 @@ def main():
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
     k_best = [10, 50, 100, 200, 400, 600, ]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
-    coef0_param = [0] + list(np.logspace(start=-3, stop=2, num=4, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=2, num=6, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
     max_iters = 2500
     # k_best = [200]
-    # coef0_param = [0.001]
     # reg_param = [1]
     # gamma_param = ['scale']
     # degree_param = [2]
