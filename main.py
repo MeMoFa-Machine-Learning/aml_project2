@@ -6,11 +6,12 @@ from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest
-from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+
 
 import logging
 logging.getLogger().setLevel(logging.INFO)
@@ -59,50 +60,42 @@ def main():
 
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
-    k_best = [10, 50, 100, 200, 400, 600, ]
-    reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
-    gamma_param = list(np.logspace(start=-3, stop=2, num=6, endpoint=True, base=10)) + ['scale']
-    degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
-    max_iters = 2500
+
+    k_best = [50, 100, 200, 400, 600, ]
+    max_depth = [3, 4, 5, 7, 9, 11]
+    min_samples_split = [2, 3, 4, 5]
+    n_estimators = [50, 75, 100, 150, 200]
+
     # k_best = [200]
-    # reg_param = [1]
-    # gamma_param = ['scale']
-    # degree_param = [2]
+    # max_depth = [9]
+    # min_samples_split = [0.4]
+    # n_estimators = [100]
 
     parameters = [
         {
             'skb__k': k_best,
-            'svc__kernel': ['rbf'],
-            'svc__C': reg_param,
-            'svc__gamma': gamma_param,
-            'svc__max_iter': [max_iters],
-            'svc__class_weight': ['balanced']
+            'rfc__criterion': ['gini'],
+            'rfc__max_depth': max_depth,
+            'rfc__min_samples_split': min_samples_split,
+            'rfc__n_estimators': n_estimators,
+            'rfc__class_weight': ['balanced'],
         },
         {
             'skb__k': k_best,
-            'svc__kernel': ['poly'],
-            'svc__C': reg_param,
-            'svc__gamma': gamma_param,
-            'svc__degree': degree_param,
-            'svc__max_iter': [max_iters],
-            'svc__class_weight': ['balanced']
+            'rfc__criterion': ['entropy'],
+            'rfc__max_depth': max_depth,
+            'rfc__min_samples_split': min_samples_split,
+            'rfc__n_estimators': n_estimators,
+            'rfc__class_weight': ['balanced'],
         },
-        # {
-        #     'skb__k': k_best,
-        #     'svc__kernel': ['sigmoid'],
-        #     'svc__C': reg_param,
-        #     'svc__gamma': gamma_param,
-        #     'svc__max_iter': [max_iters],
-        #     'svc__class_weight': ['balanced']
-        # }
     ]
 
     # Perform the cross-validation
     best_models = []
     for kernel_params in parameters:
 
-        pl = Pipeline([('skb', SelectKBest()), ('svc', SVC())])
-        kfold = StratifiedKFold(n_splits=14, shuffle=True, random_state=6)
+        pl = Pipeline([('skb', SelectKBest()), ('rfc', RandomForestClassifier())])
+        kfold = StratifiedKFold(n_splits=15, shuffle=True, random_state=6)
 
         # C-support vector classification according to a one-vs-one scheme
         grid_search = GridSearchCV(pl, kernel_params, scoring="balanced_accuracy", n_jobs=-1, cv=kfold, verbose=1)
@@ -121,7 +114,7 @@ def main():
     logging.info("Picked the following model: {}".format(final_model_params))
 
     logging.info("Fitting the final model...")
-    final_model = Pipeline([('skb', SelectKBest()), ('svc', SVC())])
+    final_model = Pipeline([('skb', SelectKBest()), ('rfc', RandomForestClassifier())])
     final_model.set_params(**final_model_params)
     final_model.fit(x_res, y_res)
 
