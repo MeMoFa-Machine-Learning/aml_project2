@@ -35,7 +35,7 @@ def oversampling(X, y):
 
 def main():
     output_pathname = "output"
-    output_filepath = ospath.join(output_pathname, "out.csv")
+    output_filepath = ospath.join(output_pathname, "out_tree.csv")
     training_data_dir = ospath.join("data", "training")
     testing_data_dir = ospath.join("data", "testing")
 
