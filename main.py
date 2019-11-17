@@ -34,7 +34,7 @@ def oversampling(X, y):
 
 def main():
     output_pathname = "output"
-    output_filepath = ospath.join(output_pathname, "out.csv")
+    output_filepath = ospath.join(output_pathname, "out_ultim.csv")
     training_data_dir = ospath.join("data", "training")
     testing_data_dir = ospath.join("data", "testing")
 
@@ -59,11 +59,11 @@ def main():
 
     # Training Step #1: Grid Search
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
-    k_best = [10, 50, 100, 200, 400, 600, ]
+    k_best = [50, 100, 300, 500, 700, 900]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
     gamma_param = list(np.logspace(start=-3, stop=2, num=5, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
-    max_iters = [2500, 3000, 3500]
+    max_iters = [2000, 2500, 3000, ]
     # k_best = [200]
     # reg_param = [1]
     # gamma_param = ['scale']
