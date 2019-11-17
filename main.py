@@ -96,7 +96,7 @@ def main():
     for kernel_params in parameters:
 
         pl = Pipeline([('skb', SelectKBest()), ('svc', SVC())])
-        kfold = StratifiedKFold(n_splits=14, shuffle=True, random_state=6)
+        kfold = StratifiedKFold(n_splits=15, shuffle=True, random_state=6)
 
         # C-support vector classification according to a one-vs-one scheme
         grid_search = GridSearchCV(pl, kernel_params, scoring="balanced_accuracy", n_jobs=-1, cv=kfold, verbose=1)
