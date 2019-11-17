@@ -61,13 +61,15 @@ def main():
     x_train_gs, x_ho, y_train_gs, y_ho = train_test_split(x_res, y_res, test_size=0.1, random_state=0)
     k_best = [10, 50, 100, 200, 400, 600, ]
     reg_param = list(np.logspace(start=-2, stop=2, num=5, endpoint=True, base=10))
-    gamma_param = list(np.logspace(start=-3, stop=2, num=6, endpoint=True, base=10)) + ['scale']
+    gamma_param = list(np.logspace(start=-3, stop=2, num=5, endpoint=True, base=10)) + ['scale']
     degree_param = list(np.logspace(start=1, stop=6, num=5, base=1.5, dtype=int))
-    max_iters = 2500
+    max_iters = [2500, 3000, 3500]
     # k_best = [200]
     # reg_param = [1]
     # gamma_param = ['scale']
     # degree_param = [2]
+    # max_iters = [3000]
+
 
     parameters = [
         {
@@ -75,7 +77,7 @@ def main():
             'svc__kernel': ['rbf'],
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
-            'svc__max_iter': [max_iters],
+            'svc__max_iter': max_iters,
             'svc__class_weight': ['balanced']
         },
         {
@@ -84,17 +86,9 @@ def main():
             'svc__C': reg_param,
             'svc__gamma': gamma_param,
             'svc__degree': degree_param,
-            'svc__max_iter': [max_iters],
+            'svc__max_iter': max_iters,
             'svc__class_weight': ['balanced']
         },
-        # {
-        #     'skb__k': k_best,
-        #     'svc__kernel': ['sigmoid'],
-        #     'svc__C': reg_param,
-        #     'svc__gamma': gamma_param,
-        #     'svc__max_iter': [max_iters],
-        #     'svc__class_weight': ['balanced']
-        # }
     ]
 
     # Perform the cross-validation
